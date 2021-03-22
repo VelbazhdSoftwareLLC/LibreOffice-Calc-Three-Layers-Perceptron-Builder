@@ -21,9 +21,11 @@
 ============================================================================ """
 
 from __future__ import unicode_literals
+from threading import Thread
+from time import sleep
 
 
-def BuildAnnModel():
+def BuildAnnModelThread(desktop):
     sheet = XSCRIPTCONTEXT.getDesktop().getCurrentComponent().CurrentController.ActiveSheet
     
     input_size = int(sheet.getCellRangeByName("C7").getValue())
@@ -39,6 +41,10 @@ def BuildAnnModel():
     x = 1
     
     for t in range(0, total_values - (input_size + output_size) + 1):
+        ''' Report example number. '''
+        sheet.getCellRangeByName("C12").setValue(t)
+        # print(str(t))
+        
         ''' Setup biases. '''
         sheet.getCellRangeByName("G" + str(x)).setValue(1)
         sheet.getCellRangeByName("G" + str(x)).CellBackColor = (255 << 16 | 255 << 8 | 0)
@@ -89,3 +95,12 @@ def BuildAnnModel():
             sheet.getCellRangeByName("K" + str(x + r)).CellBackColor = (0 << 16 | 255 << 8 | 255)
 
         x = x + example_step
+        sleep(1)
+        
+    # status.end()
+    return
+
+
+def BuildAnnModel():
+    thread = Thread(target=BuildAnnModelThread, args=(XSCRIPTCONTEXT.getDesktop(),))
+    thread.start()
