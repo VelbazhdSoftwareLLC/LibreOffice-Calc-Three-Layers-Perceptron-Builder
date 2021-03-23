@@ -33,17 +33,14 @@ def BuildAnnModelThread(desktop):
     output_size = int(sheet.getCellRangeByName("C9").getValue())
     example_step = max(max(input_size, hidden_size), output_size) + 2
     total_values = int(sheet.getCellRangeByName("C11").getValue())
-    
-    ''' Times series start index. '''
-    t = 0
+    example_start = int(sheet.getCellRangeByName("C12").getValue())
     
     ''' Example start index. '''
     x = 1
     
-    for t in range(0, total_values - (input_size + output_size) + 1):
+    for t in range(example_start, total_values - (input_size + output_size) + 1):
         ''' Report example number. '''
         sheet.getCellRangeByName("C12").setValue(t)
-        # print(str(t))
         
         ''' Setup biases. '''
         sheet.getCellRangeByName("G" + str(x)).setValue(1)
@@ -96,8 +93,7 @@ def BuildAnnModelThread(desktop):
 
         x = x + example_step
         sleep(1)
-        
-    # status.end()
+       
     return
 
 
