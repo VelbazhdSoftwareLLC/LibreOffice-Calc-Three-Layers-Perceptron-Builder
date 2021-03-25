@@ -25,7 +25,7 @@ from threading import Thread
 from time import sleep
 
 
-def BuildAnnModelThread(desktop):
+def ThreadWorker(desktop):
     sheet = XSCRIPTCONTEXT.getDesktop().getCurrentComponent().CurrentController.ActiveSheet
     
     input_size = int(sheet.getCellRangeByName("C7").getValue())
@@ -34,6 +34,12 @@ def BuildAnnModelThread(desktop):
     example_step = max(max(input_size, hidden_size), output_size) + 2
     total_values = int(sheet.getCellRangeByName("C11").getValue())
     example_start = int(sheet.getCellRangeByName("C12").getValue())
+
+    ''' Scale input. '''
+    for t in range(1, total_values + 1):
+        sheet.getCellRangeByName("E" + str(t)).setValue(sheet.getCellRangeByName("$C$4").getValue() + 
+        (sheet.getCellRangeByName("$C$5").getValue() - sheet.getCellRangeByName("$C$4").getValue()) * ((sheet.getCellRangeByName("A" + str(t)).getValue() - 
+        sheet.getCellRangeByName("$C$1").getValue()) / (sheet.getCellRangeByName("$C$2").getValue() - sheet.getCellRangeByName("$C$1").getValue())))
     
     ''' Example start index. '''
     x = 1
@@ -93,10 +99,56 @@ def BuildAnnModelThread(desktop):
 
         x = x + example_step
         sleep(1)
-       
+    
+    ''' Network total error. '''
+    sheet.getCellRangeByName("M1").setFormula("= SQRT( SUM(K:K) ) / COUNT(K:K)")
+    sheet.getCellRangeByName("M1").CellBackColor = 0
+    
+    ''' Setup biases for the operational copy of the network. '''
+    sheet.getCellRangeByName("P1").setValue(1)
+    sheet.getCellRangeByName("P1").CellBackColor = (255 << 16 | 255 << 8 | 0)
+    sheet.getCellRangeByName("R1").setValue(1)
+    sheet.getCellRangeByName("R1").CellBackColor = (255 << 16 | 255 << 8 | 0)
+    sheet.getCellRangeByName("T1").setValue(1)
+    sheet.getCellRangeByName("T1").CellBackColor = (255 << 16 | 255 << 8 | 0)
+
+    ''' Input data loading for the operational copy of the network. '''
+    for i in range(2, input_size + 2):
+        sheet.getCellRangeByName("O" + str(i)).CellBackColor = (191 << 16 | 0 << 8 | 0)
+        sheet.getCellRangeByName("P" + str(i)).setFormula("=$C$4 + ($C$5 - $C$4) * ((O" + str(i) + " - $C$1) / ($C$2 - $C$1))")
+        sheet.getCellRangeByName("P" + str(i)).CellBackColor = (255 << 16 | 0 << 8 | 0)
+    
+    ''' Setup hidden layer for the operational copy of the network. '''
+    wih = 1
+    for h in range(2, hidden_size + 2):
+        sum = ""
+        for i in range(1, input_size + 2):
+            sum = sum + "P" + str(i) + "*Q" + str(wih)
+            sheet.getCellRangeByName("Q" + str(wih)).CellBackColor = (255 << 16 | 0 << 8 | 255)
+            wih = wih + 1
+            if i < input_size + 1:
+                sum = sum + " + "
+        sheet.getCellRangeByName("R" + str(h)).setFormula("=TANH( " + sum + " )")
+        sheet.getCellRangeByName("R" + str(h)).CellBackColor = (0 << 16 | 0 << 8 | 255)
+        
+    ''' Setup output layer for the operational copy of the network. '''
+    who = 1
+    for o in range(2, output_size + 2):
+        sum = ""
+        for h in range(1, hidden_size + 2):
+            sum = sum + "R" + str(h) + "*S" + str(who)
+            sheet.getCellRangeByName("S" + str(who)).CellBackColor = (255 << 16 | 0 << 8 | 255)
+            who = who + 1
+            if h < hidden_size + 1:
+                sum = sum + " + "
+        sheet.getCellRangeByName("T" + str(o)).setFormula("=TANH( " + sum + " )")
+        sheet.getCellRangeByName("T" + str(o)).CellBackColor = (0 << 16 | 255 << 8 | 0)
+        sheet.getCellRangeByName("U" + str(o)).setFormula("=$C$1 + ($C$2 - $C$1) * ((T" + str(o) + " - $C$4) / ($C$5 - $C$4))")
+        sheet.getCellRangeByName("U" + str(o)).CellBackColor = (0 << 16 | 127 << 8 | 0)
+    
     return
 
 
 def BuildAnnModel():
-    thread = Thread(target=BuildAnnModelThread, args=(XSCRIPTCONTEXT.getDesktop(),))
+    thread = Thread(target=ThreadWorker, args=(XSCRIPTCONTEXT.getDesktop(),))
     thread.start()
