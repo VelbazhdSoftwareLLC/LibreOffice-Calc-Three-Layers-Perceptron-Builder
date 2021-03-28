@@ -101,7 +101,7 @@ def ThreadWorker(desktop):
         sleep(1)
     
     ''' Network total error. '''
-    sheet.getCellRangeByName("M1").setFormula("= SQRT( SUM(K:K) ) / COUNT(K:K)")
+    sheet.getCellRangeByName("M1").setFormula("= SQRT( SUM(K:K) / COUNT(K:K) )")
     sheet.getCellRangeByName("M1").CellBackColor = 0
     
     ''' Setup biases for the operational copy of the network. '''
